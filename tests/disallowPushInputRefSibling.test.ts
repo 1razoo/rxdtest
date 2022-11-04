@@ -22,7 +22,6 @@ describe("disallowPushInputRefSibling", () => {
   let coins: Utxo;
   let token: Utxo;
   let change: Utxo;
-  let script: string;
   let ref: string;
 
   beforeAll(async () => {
@@ -35,7 +34,7 @@ describe("disallowPushInputRefSibling", () => {
     const { privKey, ...input } = coins;
     const { address } = input;
     ref = `${swap(input.txId)}${outpointHex(input.outputIndex)}`;
-    script = Script.fromASM(
+    const script = Script.fromASM(
       `OP_PUSHINPUTREF ${ref} OP_DROP OP_DISALLOWPUSHINPUTREFSIBLING ${ref} OP_DROP OP_1`
     ).toHex();
 
@@ -64,7 +63,7 @@ describe("disallowPushInputRefSibling", () => {
           script: "",
           satoshis: 1,
           output: {
-            script,
+            script: token.script,
             satoshis: 1,
           },
         })
@@ -72,7 +71,7 @@ describe("disallowPushInputRefSibling", () => {
       .from(change)
       .addOutput(
         new Transaction.Output({
-          script,
+          script: token.script,
           satoshis: 1,
         })
       )
@@ -95,7 +94,7 @@ describe("disallowPushInputRefSibling", () => {
   it("transfers", async () => {
     const { address, privKey } = token;
 
-    const tx = buildTransferTx(token, change, script, address, privKey);
+    const tx = buildTransferTx(token, change, address, privKey);
 
     const { data } = await rpc("sendrawtransaction", [tx.toString()]);
     const { result: txId } = data;
@@ -108,7 +107,7 @@ describe("disallowPushInputRefSibling", () => {
   it("melts", async () => {
     const { address, privKey } = token;
 
-    const tx = buildMeltTx([[token, script]], change, address, privKey);
+    const tx = buildMeltTx([token], change, address, privKey);
 
     const { data } = await rpc("sendrawtransaction", [tx.toString()]);
     const { result: txId } = data;

@@ -108,7 +108,7 @@ describe("stateScriptBytecode", () => {
     it("melts", async () => {
       const { address, privKey } = coins1;
 
-      const tx = buildMeltTx([[coins1, script1]], change, address, privKey);
+      const tx = buildMeltTx([coins1], change, address, privKey);
 
       const { data } = await rpc("sendrawtransaction", [tx.toString()]);
       const { result: txId } = data;

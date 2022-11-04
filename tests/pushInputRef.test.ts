@@ -65,12 +65,12 @@ describe("pushInputRef", () => {
   describe("token", () => {
     let token: Utxo;
     let change: Utxo;
-    let script: string;
+    // let script: string;
 
     it("mints", async () => {
       const { privKey, ...input } = coins;
       const { address } = input;
-      script = Script.fromASM(
+      const script = Script.fromASM(
         `OP_PUSHINPUTREF ${swap(input.txId)}${outpointHex(
           input.outputIndex
         )} OP_DROP OP_1`
@@ -89,7 +89,7 @@ describe("pushInputRef", () => {
     it("transfers", async () => {
       const { address, privKey } = token;
 
-      const tx = buildTransferTx(token, change, script, address, privKey);
+      const tx = buildTransferTx(token, change, address, privKey);
 
       const { data } = await rpc("sendrawtransaction", [tx.toString()]);
       const { result: txId } = data;
@@ -102,7 +102,7 @@ describe("pushInputRef", () => {
     it("melts", async () => {
       const { address, privKey } = token;
 
-      const tx = buildMeltTx([[token, script]], change, address, privKey);
+      const tx = buildMeltTx([token], change, address, privKey);
 
       const { data } = await rpc("sendrawtransaction", [tx.toString()]);
       const { result: txId } = data;

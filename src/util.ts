@@ -99,7 +99,6 @@ export const buildMintTx = (
 export const buildTransferTx = (
   input: any,
   funding: any,
-  script: string,
   change: string,
   privKey: string,
   split: number[] = [1]
@@ -112,7 +111,7 @@ export const buildTransferTx = (
         script: "",
         satoshis: 1,
         output: {
-          script,
+          script: input.script,
           satoshis: 1,
         },
       })
@@ -121,7 +120,7 @@ export const buildTransferTx = (
   split.forEach((satoshis) =>
     tx.addOutput(
       new Transaction.Output({
-        script,
+        script: input.script,
         satoshis,
       })
     )
@@ -131,13 +130,13 @@ export const buildTransferTx = (
 };
 
 export const buildMeltTx = (
-  inputs: [any, any][],
+  inputs: any[],
   funding: any,
   change: string,
   privKey: string
 ) => {
   const tx = new Transaction();
-  inputs.forEach(([input, script]) =>
+  inputs.forEach((input) =>
     tx.addInput(
       new Transaction.Input({
         prevTxId: input.txId,
@@ -145,7 +144,7 @@ export const buildMeltTx = (
         script: "",
         satoshis: 1,
         output: {
-          script,
+          script: input.script,
           satoshis: 1,
         },
       })
