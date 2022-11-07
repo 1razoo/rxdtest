@@ -1,63 +1,44 @@
+import "./extendExpect";
 import client, { JsonRpc } from "../src/rpc";
 import {
-  GetUtxo,
   Utxo,
   utxoHelper,
   updateUtxos,
   swap,
   outpointHex,
-  buildMintTx,
-  buildTransferTx,
-  buildMeltTx,
+  buildTx,
 } from "../src/util";
-import {
-  Script,
-  // @ts-ignore
-} from "@radiantblockchain/radiantjs";
 
 describe("pushInputRef", () => {
   let rpc: JsonRpc;
-  let getUtxo: GetUtxo;
   let coins: Utxo;
 
   beforeAll(async () => {
     rpc = await client();
-    getUtxo = utxoHelper(rpc);
+    const getUtxo = utxoHelper(rpc);
     coins = await getUtxo(100000000);
   });
 
   it("disallows invalid tx id", async () => {
-    const { privKey, ...input } = coins;
-    const { address } = input;
-
-    const tx = buildMintTx(
-      input,
-      Script.fromASM(
-        "OP_PUSHINPUTREF 000000000000000000000000000000000000000000000000000000000000000000000000 OP_1"
-      ).toHex(),
-      address,
-      privKey
+    const tx = buildTx(
+      [coins],
+      [
+        "OP_PUSHINPUTREF 000000000000000000000000000000000000000000000000000000000000000000000000 OP_1",
+      ]
     );
 
-    const { data } = await rpc("sendrawtransaction", [tx.toString()]);
-    expect(data.error.message).toBe(
+    expect(await rpc("sendrawtransaction", [tx.toString()])).toReturnError(
       "bad-txns-inputs-outputs-invalid-transaction-reference-operations-mempool (code 19)"
     );
   });
 
   it("disallows invalid outpoint", async () => {
-    const { privKey, ...input } = coins;
-    const { address } = input;
-    const tx = buildMintTx(
-      input,
-      Script.fromASM(
-        `OP_PUSHINPUTREF ${swap(coins.txId)}00000001 OP_1`
-      ).toHex(),
-      address,
-      privKey
+    const tx = buildTx(
+      [coins],
+      [`OP_PUSHINPUTREF ${swap(coins.txId)}00000001 OP_1`]
     );
-    const { data } = await rpc("sendrawtransaction", [tx.toString()]);
-    expect(data.error.message).toBe(
+
+    expect(await rpc("sendrawtransaction", [tx.toString()])).toReturnError(
       "bad-txns-inputs-outputs-invalid-transaction-reference-operations-mempool (code 19)"
     );
   });
@@ -65,49 +46,29 @@ describe("pushInputRef", () => {
   describe("token", () => {
     let token: Utxo;
     let change: Utxo;
-    // let script: string;
+    let ref;
 
     it("mints", async () => {
-      const { privKey, ...input } = coins;
-      const { address } = input;
-      const script = Script.fromASM(
-        `OP_PUSHINPUTREF ${swap(input.txId)}${outpointHex(
-          input.outputIndex
-        )} OP_DROP OP_1`
-      ).toHex();
-
-      const tx = buildMintTx(input, script, address, privKey);
-
-      const { data } = await rpc("sendrawtransaction", [tx.toString()]);
-      const { result: txId } = data;
-      expect(txId.length).toBe(64);
-      expect(data.error).toBeNull();
-
-      [token, change] = updateUtxos(coins, txId, tx);
+      ref = swap(coins.txId);
+      const tx = buildTx(
+        [coins],
+        [`OP_PUSHINPUTREF ${ref}${outpointHex(coins.outputIndex)} OP_DROP OP_1`]
+      );
+      const response = await rpc("sendrawtransaction", [tx.toString()]);
+      expect(response).toBeValidTx();
+      [token, change] = updateUtxos(coins, response.data.result, tx);
     });
 
     it("transfers", async () => {
-      const { address, privKey } = token;
-
-      const tx = buildTransferTx(token, change, address, privKey);
-
-      const { data } = await rpc("sendrawtransaction", [tx.toString()]);
-      const { result: txId } = data;
-      expect(txId.length).toBe(64);
-      expect(data.error).toBeNull();
-
-      [token, change] = updateUtxos(token, txId, tx);
+      const tx = buildTx([token, change], [token.script]);
+      const response = await rpc("sendrawtransaction", [tx.toString()]);
+      expect(response).toBeValidTx();
+      [token, change] = updateUtxos(token, response.data.result, tx);
     });
 
     it("melts", async () => {
-      const { address, privKey } = token;
-
-      const tx = buildMeltTx([token], change, address, privKey);
-
-      const { data } = await rpc("sendrawtransaction", [tx.toString()]);
-      const { result: txId } = data;
-      expect(txId.length).toBe(64);
-      expect(data.error).toBeNull();
+      const tx = buildTx([token, change], []);
+      expect(await rpc("sendrawtransaction", [tx.toString()])).toBeValidTx();
     });
   });
 });

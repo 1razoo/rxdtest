@@ -1,24 +1,16 @@
+import "./extendExpect";
 import client, { JsonRpc } from "../src/rpc";
 import {
-  GetUtxo,
   Utxo,
   utxoHelper,
   updateUtxos,
   swap,
   outpointHex,
-  buildMintTx,
-  buildTransferTx,
-  buildMeltTx,
+  buildTx,
 } from "../src/util";
-import {
-  Script,
-  Transaction,
-  // @ts-ignore
-} from "@radiantblockchain/radiantjs";
 
 describe("disallowPushInputRefSibling", () => {
   let rpc: JsonRpc;
-  let getUtxo: GetUtxo;
   let coins: Utxo;
   let token: Utxo;
   let change: Utxo;
@@ -26,92 +18,46 @@ describe("disallowPushInputRefSibling", () => {
 
   beforeAll(async () => {
     rpc = await client();
-    getUtxo = utxoHelper(rpc);
+    const getUtxo = utxoHelper(rpc);
     coins = await getUtxo(100000000);
   });
 
   it("mints", async () => {
-    const { privKey, ...input } = coins;
-    const { address } = input;
-    ref = `${swap(input.txId)}${outpointHex(input.outputIndex)}`;
-    const script = Script.fromASM(
-      `OP_PUSHINPUTREF ${ref} OP_DROP OP_DISALLOWPUSHINPUTREFSIBLING ${ref} OP_DROP OP_1`
-    ).toHex();
+    ref = `${swap(coins.txId)}${outpointHex(coins.outputIndex)}`;
 
-    const tx = buildMintTx(input, script, address, privKey);
+    const tx = buildTx(
+      [coins],
+      [
+        `OP_PUSHINPUTREF ${ref} OP_DROP OP_DISALLOWPUSHINPUTREFSIBLING ${ref} OP_DROP OP_1`,
+      ]
+    );
 
-    const { data } = await rpc("sendrawtransaction", [tx.toString()]);
-    const { result: txId } = data;
-    expect(txId.length).toBe(64);
-    expect(data.error).toBeNull();
-
-    [token, change] = updateUtxos(coins, txId, tx);
+    const response = await rpc("sendrawtransaction", [tx.toString()]);
+    expect(response).toBeValidTx();
+    [token, change] = updateUtxos(coins, response.data.result, tx);
   });
 
   it("disallows sibling ref", async () => {
-    const { address, privKey } = token;
+    const tx = buildTx(
+      [token, change],
+      [token.script, `OP_PUSHINPUTREF ${ref} OP_DROP OP_1`]
+    );
 
-    const invalidScript = Script.fromASM(
-      `OP_PUSHINPUTREF ${ref} OP_DROP OP_1`
-    ).toHex();
-
-    const tx = new Transaction()
-      .addInput(
-        new Transaction.Input({
-          prevTxId: token.txId,
-          outputIndex: token.outputIndex,
-          script: "",
-          satoshis: 1,
-          output: {
-            script: token.script,
-            satoshis: 1,
-          },
-        })
-      )
-      .from(change)
-      .addOutput(
-        new Transaction.Output({
-          script: token.script,
-          satoshis: 1,
-        })
-      )
-      .addOutput(
-        new Transaction.Output({
-          script: invalidScript,
-          satoshis: 1,
-        })
-      )
-      .change(address)
-      .sign(privKey)
-      .seal();
-
-    const { data } = await rpc("sendrawtransaction", [tx.toString()]);
-    expect(data.error.message).toBe(
+    expect(await rpc("sendrawtransaction", [tx.toString()])).toReturnError(
       "bad-txns-inputs-outputs-invalid-transaction-reference-operations-mempool (code 19)"
     );
   });
 
   it("transfers", async () => {
-    const { address, privKey } = token;
-
-    const tx = buildTransferTx(token, change, address, privKey);
-
-    const { data } = await rpc("sendrawtransaction", [tx.toString()]);
-    const { result: txId } = data;
-    expect(txId.length).toBe(64);
-    expect(data.error).toBeNull();
-
-    [token, change] = updateUtxos(token, txId, tx);
+    const tx = buildTx([token, change], [token.script]);
+    const response = await rpc("sendrawtransaction", [tx.toString()]);
+    expect(response).toBeValidTx();
+    [token, change] = updateUtxos(token, response.data.result, tx);
   });
 
   it("melts", async () => {
-    const { address, privKey } = token;
-
-    const tx = buildMeltTx([token], change, address, privKey);
-
-    const { data } = await rpc("sendrawtransaction", [tx.toString()]);
-    const { result: txId } = data;
-    expect(txId.length).toBe(64);
-    expect(data.error).toBeNull();
+    const tx = buildTx([token, change], []);
+    const response = await rpc("sendrawtransaction", [tx.toString()]);
+    expect(response).toBeValidTx();
   });
 });

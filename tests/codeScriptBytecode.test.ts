@@ -1,16 +1,6 @@
+import "./extendExpect";
 import client, { JsonRpc } from "../src/rpc";
-import {
-  GetUtxo,
-  Utxo,
-  utxoHelper,
-  updateUtxos,
-  buildMeltTx,
-} from "../src/util";
-import {
-  Script,
-  Transaction,
-  // @ts-ignore
-} from "@radiantblockchain/radiantjs";
+import { Utxo, utxoHelper, updateUtxos, buildTx } from "../src/util";
 
 describe("codeScriptBytecode", () => {
   describe.each([
@@ -36,84 +26,34 @@ describe("codeScriptBytecode", () => {
     ],
   ])("%s", (_, asm, hash) => {
     let rpc: JsonRpc;
-    let getUtxo: GetUtxo;
-    let coins1: Utxo;
-    let coins2: Utxo;
-    let change: Utxo;
-    const script1 = Script.fromASM(asm).toHex();
-    const script2 = Script.fromASM(
-      `OP_0 OP_CODESCRIPTBYTECODE_UTXO OP_HASH256 ${hash} OP_DUP OP_ROT OP_EQUALVERIFY OP_0 OP_CODESCRIPTBYTECODE_OUTPUT OP_HASH256 OP_EQUAL`
-    ).toHex();
+    let coins: Utxo[];
+    const script2 = `OP_0 OP_CODESCRIPTBYTECODE_UTXO OP_HASH256 ${hash} OP_DUP OP_ROT OP_EQUALVERIFY OP_0 OP_CODESCRIPTBYTECODE_OUTPUT OP_HASH256 OP_EQUAL`;
 
     beforeAll(async () => {
       rpc = await client();
-      getUtxo = utxoHelper(rpc);
-      coins1 = await getUtxo(100000000);
+      const getUtxo = utxoHelper(rpc);
+      coins = [await getUtxo(100000000)];
     });
 
     it("creates utxos", async () => {
-      const { privKey: privKey, ...input } = coins1;
-      const { address } = input;
-
-      const tx = new Transaction()
-        .from(coins1)
-        .addOutput(
-          new Transaction.Output({
-            script: script1,
-            satoshis: 1,
-          })
-        )
-        .addOutput(
-          new Transaction.Output({
-            script: script2,
-            satoshis: 1,
-          })
-        )
-        .change(address)
-        .sign(privKey)
-        .seal();
-
-      const { data } = await rpc("sendrawtransaction", [tx.toString()]);
-      const { result: txId } = data;
-      expect(txId.length).toBe(64);
-      expect(data.error).toBeNull();
-      [coins1, coins2, change] = updateUtxos(coins1, txId, tx);
+      const tx = buildTx(coins, [asm, script2]);
+      const response = await rpc("sendrawtransaction", [tx.toString()]);
+      expect(response).toBeValidTx();
+      coins = updateUtxos(coins[0], response.data.result, tx);
     });
 
     it("gets correct input and output codescript", async () => {
-      const { privKey: privKey, ...input } = coins1;
-      const { address } = input;
-
-      const tx = new Transaction()
-        .from(coins1)
-        .from(coins2)
-        .from(change)
-        .addOutput(
-          new Transaction.Output({
-            script: script1,
-            satoshis: 1,
-          })
-        )
-        .change(address)
-        .sign(privKey)
-        .seal();
-
-      const { data } = await rpc("sendrawtransaction", [tx.toString()]);
-      const { result: txId } = data;
-      expect(txId.length).toBe(64);
-      expect(data.error).toBeNull();
-      [coins1, change] = updateUtxos(coins1, txId, tx);
+      const tx = buildTx(coins, [asm]);
+      const response = await rpc("sendrawtransaction", [tx.toString()]);
+      expect(response).toBeValidTx();
+      coins = updateUtxos(coins[0], response.data.result, tx);
     });
 
     it("melts", async () => {
-      const { address, privKey } = coins1;
-
-      const tx = buildMeltTx([coins1], change, address, privKey);
-
-      const { data } = await rpc("sendrawtransaction", [tx.toString()]);
-      const { result: txId } = data;
-      expect(txId.length).toBe(64);
-      expect(data.error).toBeNull();
+      const tx = buildTx(coins, []);
+      const response = await rpc("sendrawtransaction", [tx.toString()]);
+      expect(response).toBeValidTx();
+      coins = updateUtxos(coins[0], response.data.result, tx);
     });
   });
 });

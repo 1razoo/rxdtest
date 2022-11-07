@@ -52,14 +52,6 @@ export const loadDescription = (fileName: string) => {
 export const swap = (str: string) =>
   Buffer.from(str, "hex").reverse().toString("hex");
 
-export const setParams = (t: string, params: { [key: string]: string }) => {
-  Object.entries(params).forEach(([name, value]) => {
-    // @ts-ignore
-    t = t.replaceAll(`<${name}>`, value);
-  });
-  return t;
-};
-
 export const outpointHex = (n: number) => swap(`${n}`.padStart(8, "0"));
 
 export const updateUtxos = (
@@ -77,79 +69,36 @@ export const updateUtxos = (
   }));
 };
 
-export const buildMintTx = (
-  input: any,
-  script: string,
-  change: string,
-  privKey: string
-) => {
-  return new Transaction()
-    .from(input)
-    .addOutput(
-      new Transaction.Output({
-        script,
-        satoshis: 1,
-      })
-    )
-    .change(change)
-    .sign(privKey)
-    .seal();
-};
+type ScriptType = string | Script;
 
-export const buildTransferTx = (
-  input: any,
-  funding: any,
-  change: string,
-  privKey: string,
-  split: number[] = [1]
+export const buildTx = (
+  inputs: Utxo[],
+  scripts: (ScriptType | [ScriptType, number])[]
 ) => {
-  const tx = new Transaction()
-    .addInput(
-      new Transaction.Input({
-        prevTxId: input.txId,
-        outputIndex: input.outputIndex,
-        script: "",
-        satoshis: 1,
-        output: {
-          script: input.script,
-          satoshis: 1,
-        },
-      })
-    )
-    .from(funding);
-  split.forEach((satoshis) =>
+  const { address, privKey } = inputs[0];
+  const tx = new Transaction();
+  inputs.forEach((input) => tx.from(input));
+  scripts.forEach((output) => {
+    const [script, value] = Array.isArray(output) ? output : [output, 1];
     tx.addOutput(
       new Transaction.Output({
-        script: input.script,
-        satoshis,
+        script:
+          typeof script === "string" ? Script.fromASM(script).toHex() : script,
+        satoshis: value,
       })
-    )
-  );
-  tx.change(change).sign(privKey).seal();
+    );
+  });
+  tx.change(address).sign(privKey).seal();
   return tx;
 };
 
-export const buildMeltTx = (
-  inputs: any[],
-  funding: any,
-  change: string,
-  privKey: string
-) => {
-  const tx = new Transaction();
-  inputs.forEach((input) =>
-    tx.addInput(
-      new Transaction.Input({
-        prevTxId: input.txId,
-        outputIndex: input.outputIndex,
-        script: "",
-        satoshis: 1,
-        output: {
-          script: input.script,
-          satoshis: 1,
-        },
-      })
-    )
-  );
-  tx.from(funding).change(change).sign(privKey).seal();
-  return tx;
+export const buildSplitTx = (input: Utxo, n: number) => {
+  const { address, privKey } = input;
+  const splitTx = new Transaction().from(input);
+  for (let i = 0; i < n; i++) splitTx.to(address, 1);
+  splitTx.change(address).sign(privKey).seal();
+  return splitTx;
 };
+
+export const buildRef = (utxo: Utxo) =>
+  `${swap(utxo.txId)}${outpointHex(utxo.outputIndex)}`;
