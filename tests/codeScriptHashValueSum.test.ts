@@ -20,9 +20,9 @@ describe("codeScriptHashValueSum", () => {
 
   it("creates utxos", async () => {
     const tx = buildTx(coins, [
-      [`OP_STATESEPERATOR OP_1`, 3],
-      [`OP_STATESEPERATOR OP_1`, 2],
-      [`OP_STATESEPERATOR OP_2`, 6],
+      [`OP_STATESEPARATOR OP_1`, 3],
+      [`OP_STATESEPARATOR OP_1`, 2],
+      [`OP_STATESEPARATOR OP_2`, 6],
       `${Op1Hash} OP_CODESCRIPTHASHVALUESUM_UTXOS OP_5 OP_EQUALVERIFY ` +
         `${Op2Hash} OP_CODESCRIPTHASHVALUESUM_UTXOS OP_6 OP_EQUALVERIFY ` +
         `${OtherHash} OP_CODESCRIPTHASHVALUESUM_UTXOS OP_0 OP_EQUAL`,
@@ -37,9 +37,9 @@ describe("codeScriptHashValueSum", () => {
 
   it("has correct sum", async () => {
     const tx = buildTx(coins, [
-      [`OP_STATESEPERATOR OP_1`, 1],
-      [`OP_STATESEPERATOR OP_1`, 6],
-      [`OP_STATESEPERATOR OP_2`, 8],
+      [`OP_STATESEPARATOR OP_1`, 1],
+      [`OP_STATESEPARATOR OP_1`, 6],
+      [`OP_STATESEPARATOR OP_2`, 8],
     ]);
     const response = await rpc("sendrawtransaction", [tx.toString()]);
     expect(response).toBeValidTx();

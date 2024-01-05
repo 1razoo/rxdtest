@@ -5,18 +5,18 @@ import { Utxo, utxoHelper, updateUtxos, buildTx } from "../src/util";
 describe("stateSeparatorIndex", () => {
   describe.each([
     ["no separator", "1111 OP_DROP OP_1", "OP_0"],
-    ["separator at start", "OP_STATESEPERATOR 1111 OP_DROP OP_1", "OP_1"],
+    ["separator at start", "OP_STATESEPARATOR 1111 OP_DROP OP_1", "OP_1"],
     [
       "separator at middle",
-      "OP_1 OP_DROP OP_STATESEPERATOR 1111 OP_DROP OP_1",
+      "OP_1 OP_DROP OP_STATESEPARATOR 1111 OP_DROP OP_1",
       "OP_3",
     ],
-    ["separator at end", "1111 OP_DROP OP_1 OP_STATESEPERATOR", "OP_6"],
+    ["separator at end", "1111 OP_DROP OP_1 OP_STATESEPARATOR", "OP_6"],
   ])("%s", (_, asm, separatorIndex) => {
     let rpc: JsonRpc;
     let coins: Utxo[];
     const script1 = asm;
-    const script2 = `OP_0 OP_STATESEPERATORINDEX_UTXO ${separatorIndex} OP_DUP OP_ROT OP_EQUALVERIFY OP_0 OP_STATESEPERATORINDEX_OUTPUT OP_EQUAL`;
+    const script2 = `OP_0 OP_STATESEPARATORINDEX_UTXO ${separatorIndex} OP_DUP OP_ROT OP_EQUALVERIFY OP_0 OP_STATESEPARATORINDEX_OUTPUT OP_EQUAL`;
 
     beforeAll(async () => {
       rpc = await client();

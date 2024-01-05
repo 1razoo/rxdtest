@@ -13,14 +13,14 @@ describe("stateSeparator", () => {
   });
 
   it("allows op return after state separator", async () => {
-    const tx = buildTx([coins], ["OP_STATESEPERATOR OP_RETURN"]);
+    const tx = buildTx([coins], ["OP_STATESEPARATOR OP_RETURN"]);
     const response = await rpc("sendrawtransaction", [tx.toString()]);
     expect(response).toBeValidTx();
     [, coins] = updateUtxos(coins, response.data.result, tx);
   });
 
   it("disallows op return before state separator", async () => {
-    const tx = buildTx([coins], ["OP_RETURN OP_STATESEPERATOR OP_1"]);
+    const tx = buildTx([coins], ["OP_RETURN OP_STATESEPARATOR OP_1"]);
 
     expect(await rpc("sendrawtransaction", [tx.toString()])).toReturnError(
       "bad-txns-inputs-outputs-invalid-transaction-reference-operations-mempool (code 19)"
@@ -28,7 +28,7 @@ describe("stateSeparator", () => {
   });
 
   it("disallows multiple state separators", async () => {
-    const tx = buildTx([coins], ["OP_STATESEPERATOR OP_STATESEPERATOR OP_1"]);
+    const tx = buildTx([coins], ["OP_STATESEPARATOR OP_STATESEPARATOR OP_1"]);
 
     expect(await rpc("sendrawtransaction", [tx.toString()])).toReturnError(
       "bad-txns-inputs-outputs-invalid-transaction-reference-operations-mempool (code 19)"

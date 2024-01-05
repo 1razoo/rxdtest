@@ -11,17 +11,17 @@ describe("stateScriptBytecode", () => {
     ],
     [
       "separator at start",
-      "OP_STATESEPERATOR 1111 OP_DROP OP_1",
+      "OP_STATESEPARATOR 1111 OP_DROP OP_1",
       "5df6e0e2761359d30a8275058e299fcc0381534545f55cf43e41983f5d4c9456",
     ],
     [
       "separator at middle",
-      "OP_1 OP_DROP OP_STATESEPERATOR 1111 OP_DROP OP_1",
+      "OP_1 OP_DROP OP_STATESEPARATOR 1111 OP_DROP OP_1",
       "7ac3891f7a470b9e25b035db7b4e03218e80798b135ce98abc82127241104102",
     ],
     [
       "separator at end",
-      "1111 OP_DROP OP_1 OP_STATESEPERATOR",
+      "1111 OP_DROP OP_1 OP_STATESEPARATOR",
       "4c11796c796066e1d7e1181523ea77ef52c4def24b088cf668df10337153bbe4",
     ],
   ])("%s", (_, asm, hash) => {

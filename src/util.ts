@@ -2,6 +2,7 @@ import { join } from "path";
 import { readFileSync } from "fs";
 import Big from "big.js";
 import {
+  // @ts-ignore
   Output,
   Script,
   Transaction,
@@ -27,6 +28,7 @@ const SATS = 100000000;
 
 export const utxoHelper =
   (rpc: JsonRpc): GetUtxo =>
+  // @ts-ignore
   async (value) => {
     const coins = new Big(value).div(SATS);
     const address = (await rpc("getnewaddress")).data.result;
@@ -73,16 +75,36 @@ type ScriptType = string | Script;
 
 export const buildTx = (
   inputs: Utxo[],
-  scripts: (ScriptType | [ScriptType, number])[]
+  scripts: (ScriptType | [ScriptType, number])[],
+  inputScripts: (Script | undefined)[] = []
 ) => {
   const { address, privKey } = inputs[0];
   const tx = new Transaction();
-  inputs.forEach((input) => tx.from(input));
+  inputs.forEach((input, index) => {
+    if (inputScripts[index]) {
+      tx.addInput(
+        new Transaction.Input({
+          prevTxId: input.txId,
+          outputIndex: input.outputIndex,
+          script: new Script(),
+          output: new Transaction.Output({
+            script: input.script,
+            satoshis: input.satoshis,
+          }),
+        })
+      );
+      // @ts-ignore
+      tx.setInputScript(index, inputScripts[index]);
+    } else {
+      tx.from(input);
+    }
+  });
   scripts.forEach((output) => {
     const [script, value] = Array.isArray(output) ? output : [output, 1];
     tx.addOutput(
       new Transaction.Output({
         script:
+          // @ts-ignore
           typeof script === "string" ? Script.fromASM(script).toHex() : script,
         satoshis: value,
       })

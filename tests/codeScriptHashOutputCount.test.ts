@@ -27,10 +27,10 @@ describe("codeScriptHashOutputCount", () => {
 
   it("creates utxos", async () => {
     const tx = buildTx(coins, [
-      [`OP_STATESEPERATOR OP_1`, 0],
-      [`OP_STATESEPERATOR OP_1`, 0],
-      `OP_STATESEPERATOR OP_1`,
-      `OP_STATESEPERATOR OP_2`,
+      [`OP_STATESEPARATOR OP_1`, 0],
+      [`OP_STATESEPARATOR OP_1`, 0],
+      `OP_STATESEPARATOR OP_1`,
+      `OP_STATESEPARATOR OP_2`,
       `${op1Hash} OP_CODESCRIPTHASHOUTPUTCOUNT_UTXOS OP_3 OP_EQUALVERIFY ${op1Hash} OP_CODESCRIPTHASHZEROVALUEDOUTPUTCOUNT_UTXOS OP_2 OP_EQUALVERIFY ` +
         `${op2Hash} OP_CODESCRIPTHASHOUTPUTCOUNT_UTXOS OP_1 OP_EQUALVERIFY ${op2Hash} OP_CODESCRIPTHASHZEROVALUEDOUTPUTCOUNT_UTXOS OP_0 OP_EQUALVERIFY ` +
         `${otherHash} OP_CODESCRIPTHASHOUTPUTCOUNT_UTXOS OP_0 OP_EQUALVERIFY ${otherHash} OP_CODESCRIPTHASHZEROVALUEDOUTPUTCOUNT_UTXOS OP_0 OP_EQUALVERIFY ` +
@@ -45,13 +45,13 @@ describe("codeScriptHashOutputCount", () => {
 
   it("has correct count", async () => {
     const tx = buildTx(coins, [
-      [`OP_STATESEPERATOR OP_1`, 0],
-      [`OP_STATESEPERATOR OP_1`, 0],
-      [`OP_STATESEPERATOR OP_1`, 0],
-      `OP_STATESEPERATOR OP_1`,
-      `OP_STATESEPERATOR OP_1`,
-      `OP_STATESEPERATOR OP_2`,
-      `OP_STATESEPERATOR OP_2`,
+      [`OP_STATESEPARATOR OP_1`, 0],
+      [`OP_STATESEPARATOR OP_1`, 0],
+      [`OP_STATESEPARATOR OP_1`, 0],
+      `OP_STATESEPARATOR OP_1`,
+      `OP_STATESEPARATOR OP_1`,
+      `OP_STATESEPARATOR OP_2`,
+      `OP_STATESEPARATOR OP_2`,
     ]);
     const response = await rpc("sendrawtransaction", [tx.toString()]);
     expect(response).toBeValidTx();
